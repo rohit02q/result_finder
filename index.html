@@ -175,7 +175,7 @@ let schoolNameGlobal = "";
 
 async function start() {
   stop = false;
-
+  schoolNameGlobal = "";
   const rollCode = document.getElementById("rollCode").value;
   const startVal = +document.getElementById("start").value;
   const endVal = +document.getElementById("end").value;
@@ -246,7 +246,7 @@ async function start() {
   }
 
   if (finalResults.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3">No Results Found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;">No Results Found</td></tr>`;
     return;
   }
 
@@ -283,4 +283,4 @@ function downloadCSV() {
 </script>
 
 </body>
-</html></html>
+</html>
