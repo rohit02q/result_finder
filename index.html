@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Result Finder Pro</title>
-
+<title>Result Finder Pro - Fast BSEB Result Search Tool</title>
+<meta name="description" content="Result Finder Pro is a fast and mobile-friendly tool to search, filter, and rank student results using roll code and roll number range. Find toppers, filter by marks, and export results instantly.">
+<meta name="keywords" content="result finder, bseb result tool, roll code result search, student result checker, marks filter tool, topper finder, result analyzer, bihar board result tool">
+<meta name="author" content="Rohit"><meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 body {
   font-family: system-ui;
@@ -28,7 +32,6 @@ body {
 
 h2 {
   text-align: center;
-  margin-bottom: 10px;
 }
 
 input {
@@ -37,6 +40,15 @@ input {
   margin: 6px 0;
   border-radius: 8px;
   border: 1px solid #ddd;
+  outline: none;
+  transition: all 0.25s ease;
+  background: #fff;
+}
+
+input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background: #ffffff;
 }
 
 button {
@@ -48,10 +60,6 @@ button {
   color: white;
   font-weight: bold;
   margin-top: 10px;
-}
-
-button:active {
-  transform: scale(0.98);
 }
 
 .progress {
@@ -74,6 +82,24 @@ button:active {
   margin-top: 6px;
 }
 
+/* SCHOOL CARD */
+.school-card {
+  display: none;
+  background: #fff;
+  border-left: 4px solid #4f46e5;
+}
+
+.school-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.students {
+  font-size: 13px;
+  color: #555;
+}
+
+/* TABLE */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -85,17 +111,12 @@ th, td {
   border-bottom: 1px solid #eee;
 }
 
-th {
-  text-align: left;
-}
-
 td:last-child, th:last-child {
   text-align: right;
 }
 
 .download {
   background: #10b981;
-  margin-top: 10px;
 }
 </style>
 </head>
@@ -120,7 +141,10 @@ td:last-child, th:last-child {
 </div>
 
 <div class="status" id="status"></div>
-
+</div>
+<div class="card school-card" id="schoolCard">
+  <div class="school-name" id="schoolName"></div>
+  <div class="students" id="studentCount"></div>
 </div>
 
 <div class="card">
@@ -146,8 +170,12 @@ td:last-child, th:last-child {
 <script>
 
 let finalResults = [];
+let stop = false;
+let schoolNameGlobal = "";
 
 async function start() {
+  stop = false;
+
   const rollCode = document.getElementById("rollCode").value;
   const startVal = +document.getElementById("start").value;
   const endVal = +document.getElementById("end").value;
@@ -158,50 +186,64 @@ async function start() {
   const status = document.getElementById("status");
   const tbody = document.getElementById("tbody");
 
+  const schoolCard = document.getElementById("schoolCard");
+  const schoolName = document.getElementById("schoolName");
+  const studentCount = document.getElementById("studentCount");
+
+  schoolCard.style.display = "none";
   finalResults = [];
   tbody.innerHTML = "";
 
   let total = endVal - startVal + 1;
   let done = 0;
 
-  const BATCH_SIZE = 10;
+  const BATCH = 10;
 
-  for (let i = startVal; i <= endVal; i += BATCH_SIZE) {
+  for (let i = startVal; i <= endVal && !stop; i += BATCH) {
     let batch = [];
 
-    for (let j = i; j < i + BATCH_SIZE && j <= endVal; j++) {
-      const rollNo = 2600000 + j;
+    for (let j = i; j < i + BATCH && j <= endVal; j++) {
 
+      if (stop) break;
+
+      const rollNo = 2600000 + j;
       batch.push(
         fetch(`https://api.matricbiharboard.com/result?roll_code=${rollCode}&roll_no=${rollNo}`)
         .then(res => res.json())
         .then(json => {
+          if (!json.success) {
+            stop = true;
+            return;
+          }
           done++;
-
           let percent = (done / total) * 100;
           bar.style.width = percent + "%";
           status.innerText = `Processing ${done}/${total}`;
-
-          if (json.success) {
-            const d = json.data;
-
-            if (d.total >= min && d.total <= max) {
-              finalResults.push({
-                roll: rollNo,
-                name: d.name,
-                marks: d.total
-              });
-            }
+          const d = json.data;
+          if (!schoolNameGlobal) {
+            schoolNameGlobal = d.school_name;
           }
+
+          if (d.total >= min && d.total <= max) {
+            finalResults.push({
+              roll: rollNo,
+              name: d.name,
+              marks: d.total
+            });
+          }
+
         })
-        .catch(() => done++)
+        .catch(() => {})
       );
     }
-
     await Promise.all(batch);
   }
-
   finalResults.sort((a,b) => b.marks - a.marks);
+  if (schoolNameGlobal) {
+    schoolCard.style.display = "block";
+    schoolName.innerText = schoolNameGlobal;
+    studentCount.innerText = `Total Students Found: ${finalResults.length}`;
+  }
 
   if (finalResults.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3">No Results Found</td></tr>`;
@@ -216,7 +258,7 @@ async function start() {
     </tr>
   `).join("");
 
-  status.innerText = "Done ✅";
+  status.innerText = stop ? "Stopped (Invalid Found)" : "Done ✅";
 }
 
 
@@ -241,4 +283,4 @@ function downloadCSV() {
 </script>
 
 </body>
-</html>
+</html></html>
